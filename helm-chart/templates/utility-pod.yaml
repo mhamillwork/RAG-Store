@@ -1,0 +1,40 @@
+{{- if .Values.utilityPod.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "rag-store.fullname" . }}-storage-utility
+  labels:
+    {{- include "rag-store.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storage-utility
+spec:
+  restartPolicy: Always
+  serviceAccountName: {{ default (include "rag-store.fullname" .) .Values.serviceAccount.name }}
+  {{- with .Values.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: shell
+      image: {{ include "rag-store.image" (dict "root" . "image" .Values.fileApi.image) }}
+      command: ["sleep", "infinity"]
+      securityContext:
+        {{- toYaml .Values.containerSecurityContext | nindent 8 }}
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: global-data
+          mountPath: {{ .Values.persistence.global.mountPath }}
+        - name: local-data
+          mountPath: {{ .Values.persistence.local.mountPath }}
+  volumes:
+    - name: tmp
+      emptyDir: {}
+    - name: global-data
+      persistentVolumeClaim:
+        claimName: {{ .Values.persistence.global.existingClaim | default (printf "%s-global" (include "rag-store.fullname" .)) }}
+    - name: local-data
+      persistentVolumeClaim:
+        claimName: {{ .Values.persistence.local.existingClaim | default (printf "%s-local" (include "rag-store.fullname" .)) }}
+{{- end }}

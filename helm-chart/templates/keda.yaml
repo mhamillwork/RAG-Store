@@ -1,0 +1,41 @@
+{{- $root := . -}}
+{{- $keda := false -}}
+{{- range $name := list "ingestionWorker" "doclingWorker" }}
+{{- $component := index $root.Values $name }}
+{{- if and $component.enabled $component.keda $component.keda.enabled (not $root.Values.maintenance.enabled) }}
+{{- $keda = true }}
+{{- end }}
+{{- end }}
+{{- if $keda }}
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: {{ include "rag-store.fullname" $root }}-keda-pg
+spec:
+  secretTargetRef:
+    - parameter: connection
+      name: {{ $root.Values.existingSecret }}
+      key: {{ $root.Values.secretKeys.workerUrl }}
+{{- end }}
+{{- range $name := list "ingestionWorker" "doclingWorker" }}
+{{- $component := index $root.Values $name }}
+{{- if and $component.enabled $component.keda $component.keda.enabled (not $root.Values.maintenance.enabled) }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "rag-store.fullname" $root }}-{{ $name | kebabcase }}
+spec:
+  scaleTargetRef:
+    name: {{ include "rag-store.fullname" $root }}-{{ $name | kebabcase }}
+  minReplicaCount: {{ $component.keda.minReplicaCount }}
+  maxReplicaCount: {{ $component.keda.maxReplicaCount }}
+  triggers:
+    - type: postgresql
+      metadata:
+        query: "SELECT ceil(count(*)::numeric / {{ $component.keda.targetPendingJobsPerReplica }}) FROM ragstore.ingestion_jobs WHERE state IN ('queued','retry_pending')"
+        targetQueryValue: "1"
+      authenticationRef:
+        name: {{ include "rag-store.fullname" $root }}-keda-pg
+{{- end }}
+{{- end }}

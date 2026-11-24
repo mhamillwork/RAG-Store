@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rag-store.fullname" . }}-config
+  labels:
+    {{- include "rag-store.labels" . | nindent 4 }}
+data:
+  RAG_STORE_ENVIRONMENT: {{ .Values.config.environment | quote }}
+  RAG_STORE_INSTANCE_NAME: {{ .Values.config.instanceName | quote }}
+  RAG_STORE_LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  RAG_STORE_PUBLIC_BASE_URL: {{ .Values.config.publicBaseUrl | quote }}
+  RAG_STORE_HTTP__PORT: "8080"
+  RAG_STORE_AUTH__JWT_TTL_SECONDS: {{ .Values.config.auth.jwtTtlSeconds | quote }}
+  RAG_STORE_AUTH__REFRESH_TTL_SECONDS: {{ .Values.config.auth.refreshTtlSeconds | quote }}
+  RAG_STORE_AUTH__BOOTSTRAP_ADMIN_USERNAME: {{ .Values.config.auth.bootstrapAdminUsername | quote }}
+  RAG_STORE_AUTH__OIDC_ISSUER: {{ .Values.config.auth.oidcIssuer | quote }}
+  RAG_STORE_AUTH__OIDC_CLIENT_ID: {{ .Values.config.auth.oidcClientId | quote }}
+  RAG_STORE_EMBEDDING__PROVIDER: {{ .Values.config.embedding.provider | quote }}
+  RAG_STORE_EMBEDDING__BASE_URL: {{ .Values.config.embedding.baseUrl | quote }}
+  RAG_STORE_EMBEDDING__API_PATH: {{ .Values.config.embedding.apiPath | quote }}
+  RAG_STORE_EMBEDDING__MODEL: {{ .Values.config.embedding.model | quote }}
+  RAG_STORE_EMBEDDING__DIMENSIONS: {{ .Values.config.embedding.dimensions | quote }}
+  RAG_STORE_EMBEDDING__BATCH_SIZE: {{ .Values.config.embedding.batchSize | quote }}
+  RAG_STORE_EMBEDDING__TIMEOUT_SECONDS: {{ .Values.config.embedding.timeoutSeconds | quote }}
+  RAG_STORE_EMBEDDING__MAX_RETRIES: {{ .Values.config.embedding.maxRetries | quote }}
+  RAG_STORE_EMBEDDING__QUERY_PREFIX: {{ .Values.config.embedding.queryPrefix | quote }}
+  RAG_STORE_EMBEDDING__DOCUMENT_PREFIX: {{ .Values.config.embedding.documentPrefix | quote }}
+  RAG_STORE_EMBEDDING__TLS_VERIFY: {{ .Values.config.embedding.tlsVerify | quote }}
+  RAG_STORE_RERANKING__ENABLED: {{ .Values.config.reranking.enabled | quote }}
+  RAG_STORE_RERANKING__PROVIDER: {{ .Values.config.reranking.provider | quote }}
+  RAG_STORE_RERANKING__BASE_URL: {{ .Values.config.reranking.baseUrl | quote }}
+  RAG_STORE_RERANKING__MODEL: {{ .Values.config.reranking.model | quote }}
+  RAG_STORE_RERANKING__API_PATH: {{ .Values.config.reranking.apiPath | quote }}
+  RAG_STORE_RERANKING__CANDIDATE_COUNT: {{ .Values.config.reranking.candidateCount | quote }}
+  RAG_STORE_RERANKING__TOP_K: {{ .Values.config.reranking.topK | quote }}
+  RAG_STORE_RERANKING__TIMEOUT_SECONDS: {{ .Values.config.reranking.timeoutSeconds | quote }}
+  RAG_STORE_RERANKING__ALLOW_FALLBACK: {{ .Values.config.reranking.allowFallback | quote }}
+  RAG_STORE_RERANKING__TLS_VERIFY: {{ .Values.config.reranking.tlsVerify | quote }}
+  RAG_STORE_CONCURRENCY__EMBEDDING_GLOBAL_LIMIT: {{ .Values.config.concurrency.embeddingGlobalLimit | quote }}
+  RAG_STORE_CONCURRENCY__EMBEDDING_RESERVED_INTERACTIVE: {{ .Values.config.concurrency.embeddingReservedInteractive | quote }}
+  RAG_STORE_CONCURRENCY__RERANK_GLOBAL_LIMIT: {{ .Values.config.concurrency.rerankGlobalLimit | quote }}
+  RAG_STORE_CHUNKING__STRATEGY: {{ .Values.config.chunking.strategy | quote }}
+  RAG_STORE_CHUNKING__MAX_TOKENS: {{ .Values.config.chunking.maxTokens | quote }}
+  RAG_STORE_CHUNKING__OVERLAP_TOKENS: {{ .Values.config.chunking.overlapTokens | quote }}
+  RAG_STORE_CHUNKING__TOKENIZER_MODE: {{ .Values.config.chunking.tokenizerMode | quote }}
+  RAG_STORE_CHUNKING__TOKENIZER_PATH: {{ .Values.config.chunking.tokenizerPath | quote }}
+  RAG_STORE_CHUNKING__TOKENIZER_REQUIRED: {{ .Values.config.chunking.tokenizerRequired | quote }}
+  RAG_STORE_DOCLING__ENABLED: {{ .Values.config.docling.enabled | quote }}
+  RAG_STORE_DOCLING__ARTIFACTS_PATH: {{ .Values.config.docling.artifactsPath | quote }}
+  RAG_STORE_DOCLING__OFFLINE_MODE: {{ .Values.config.docling.offlineMode | quote }}
+  RAG_STORE_DOCLING__ALLOW_REMOTE_SERVICES: {{ .Values.config.docling.allowRemoteServices | quote }}
+  RAG_STORE_DOCLING__ALLOW_MODEL_DOWNLOADS: {{ .Values.config.docling.allowModelDownloads | quote }}
+  RAG_STORE_DOCLING__DEVICE: {{ .Values.config.docling.device | quote }}
+  RAG_STORE_DOCLING__NUM_THREADS: {{ .Values.config.docling.numThreads | quote }}
+  RAG_STORE_DOCLING__MAX_CONCURRENT_DOCUMENTS: {{ .Values.config.docling.maxConcurrentDocuments | quote }}
+  RAG_STORE_DOCLING__MAX_PAGES: {{ .Values.config.docling.maxPages | quote }}
+  RAG_STORE_DOCLING__MAX_DOCUMENT_MIB: {{ .Values.config.docling.maxDocumentMib | quote }}
+  RAG_STORE_DOCLING__TIMEOUT_SECONDS: {{ .Values.config.docling.timeoutSeconds | quote }}
+  RAG_STORE_DOCLING__OCR_ENABLED: {{ .Values.config.docling.ocrEnabled | quote }}
+  RAG_STORE_DOCLING__OCR_ENGINE: {{ .Values.config.docling.ocrEngine | quote }}
+  RAG_STORE_DOCLING__OCR_MODE: {{ .Values.config.docling.ocrMode | quote }}
+  RAG_STORE_DOCLING__OCR_LANGUAGES: {{ .Values.config.docling.ocrLanguages | quote }}
+  RAG_STORE_DOCLING__FORCE_FULL_PAGE_OCR: {{ .Values.config.docling.forceFullPageOcr | quote }}
+  RAG_STORE_DOCLING__TABLE_STRUCTURE_ENABLED: {{ .Values.config.docling.tableStructureEnabled | quote }}
+  RAG_STORE_DOCLING__TABLE_MODE: {{ .Values.config.docling.tableMode | quote }}
+  RAG_STORE_SEARCH__DEFAULT_MODE: {{ .Values.config.search.defaultMode | quote }}
+  RAG_STORE_SEARCH__DEFAULT_TOP_K: {{ .Values.config.search.defaultTopK | quote }}
+  RAG_STORE_SEARCH__MAX_TOP_K: {{ .Values.config.search.maxTopK | quote }}
+  RAG_STORE_SEARCH__CANDIDATE_COUNT: {{ .Values.config.search.candidateCount | quote }}
+  RAG_STORE_JOBS__LEASE_SECONDS: {{ .Values.config.jobs.leaseSeconds | quote }}
+  RAG_STORE_JOBS__MAX_ATTEMPTS: {{ .Values.config.jobs.maxAttempts | quote }}
+  RAG_STORE_QUOTA__MAX_BYTES: {{ .Values.config.quota.maxBytes | quote }}
+  RAG_STORE_QUOTA__MAX_DOCUMENTS: {{ .Values.config.quota.maxDocuments | quote }}
+  RAG_STORE_QUOTA__MAX_COLLECTIONS: {{ .Values.config.quota.maxCollections | quote }}
+  RAG_STORE_MCP__PATH: {{ .Values.config.mcp.path | quote }}
+  RAG_STORE_MCP__ALLOWED_HOSTS: {{ .Values.config.mcp.allowedHosts | quote }}
+  RAG_STORE_MCP__PROTECT_DNS_REBINDING: {{ .Values.config.mcp.protectDnsRebinding | quote }}
+  RAG_STORE_STORAGE__GLOBAL_ROOT: {{ .Values.persistence.global.mountPath | quote }}
+  RAG_STORE_STORAGE__LOCAL_ROOT: {{ .Values.persistence.local.mountPath | quote }}
+  MAINTENANCE_MODE: {{ .Values.maintenance.enabled | quote }}

@@ -1,0 +1,33 @@
+{{- if .Values.serviceMonitor.enabled }}
+{{- $root := . -}}
+{{- range $name := list "searchApi" "fileApi" "mcp" "ingestionWorker" "scanner" "doclingWorker" }}
+{{- $component := index $root.Values $name }}
+{{- if $component.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "rag-store.fullname" $root }}-{{ $name | kebabcase }}
+  {{- if $root.Values.serviceMonitor.namespace }}
+  namespace: {{ $root.Values.serviceMonitor.namespace }}
+  {{- end }}
+  labels:
+    {{- include "rag-store.labels" $root | nindent 4 }}
+    {{- with $root.Values.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  namespaceSelector:
+    matchNames: [{{ $root.Release.Namespace }}]
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $root.Release.Name }}
+      app.kubernetes.io/component: {{ $name | kebabcase }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ $root.Values.serviceMonitor.interval }}
+      scrapeTimeout: {{ $root.Values.serviceMonitor.scrapeTimeout }}
+{{- end }}
+{{- end }}
+{{- end }}

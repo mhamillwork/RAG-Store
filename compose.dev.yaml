@@ -1,0 +1,32 @@
+# Development overrides. Build from this repository and mount source plus local data.
+#   docker compose -f compose.yaml -f compose.dev.yaml up --build
+services:
+  search:
+    build: {context: ., dockerfile: dockerfile/Dockerfile.rag-store-api}
+    volumes: ["./src:/opt/rag-store/src:ro"]
+  files:
+    build: {context: ., dockerfile: dockerfile/Dockerfile.rag-store-files}
+    volumes:
+      - ./src:/opt/rag-store/src:ro
+      - ./dev-data/global:/data/global
+      - ./dev-data/local:/data/local
+  worker:
+    build: {context: ., dockerfile: dockerfile/Dockerfile.rag-store-worker}
+    volumes:
+      - ./dev-data/global:/data/global
+      - ./dev-data/local:/data/local
+  scanner:
+    build: {context: ., dockerfile: dockerfile/Dockerfile.rag-store-scanner}
+    volumes:
+      - ./dev-data/global:/data/global
+      - ./dev-data/local:/data/local
+  mcp:
+    build: {context: ., dockerfile: dockerfile/Dockerfile.rag-store-mcp}
+  docling:
+    build: {context: ., dockerfile: dockerfile/Dockerfile.rag-store-docling}
+    volumes:
+      - ./dev-data/global:/data/global
+      - ./dev-data/local:/data/local
+      - ${RAG_STORE_DOCLING_MODELS:-./models/docling}:/models/docling:ro
+  gui:
+    build: {context: ., dockerfile: dockerfile/Dockerfile.rag-store-gui}

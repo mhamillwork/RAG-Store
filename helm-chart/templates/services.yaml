@@ -1,0 +1,23 @@
+{{- $root := . -}}
+{{- range $name := list "searchApi" "ingestionWorker" "scanner" "mcp" "fileApi" "webGui" "doclingWorker" }}
+{{- $component := index $root.Values $name }}
+{{- if $component.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rag-store.fullname" $root }}-{{ $name | kebabcase }}
+  labels:
+    {{- include "rag-store.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name | kebabcase }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: {{ $root.Release.Name }}
+    app.kubernetes.io/component: {{ $name | kebabcase }}
+  ports:
+    - name: http
+      port: {{ $component.port }}
+      targetPort: http
+{{- end }}
+{{- end }}

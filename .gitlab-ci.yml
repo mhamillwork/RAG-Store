@@ -1,0 +1,184 @@
+stages:
+  - backend-validation
+  - frontend-validation
+  - lint
+  - unit-tests
+  - database-integration
+  - docling-tests
+  - ocr-tests
+  - gui-tests
+  - security-tests
+  - isolation-tests
+  - concurrency-tests
+  - image-build
+  - helm-lint
+  - helm-render
+  - image-publish
+  - chart-package
+  - chart-publish
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  RAG_STORE_IMAGE_PREFIX: "$CI_REGISTRY_IMAGE"
+  RAG_STORE_CHART_REPO: ""
+
+.python:
+  image: python:3.12.12-slim-bookworm
+  before_script:
+    - python -m pip install --upgrade pip
+    - pip install -e ".[dev]"
+
+backend:
+  extends: .python
+  stage: backend-validation
+  script:
+    - python -c "import rag_store, rag_store.api.app, rag_store.mcp.server, rag_store.cli.main"
+
+frontend:
+  image: node:22.21.0-bookworm-slim
+  stage: frontend-validation
+  script:
+    - cd src/frontend
+    - npm ci
+    - npm run build
+
+lint:
+  extends: .python
+  stage: lint
+  script:
+    - ruff check src tests
+
+unit:
+  extends: .python
+  stage: unit-tests
+  script:
+    - pytest tests/unit
+
+integration:
+  extends: .python
+  stage: database-integration
+  services:
+    - name: pgvector/pgvector:0.8.0-pg16
+      alias: postgres
+  variables:
+    POSTGRES_PASSWORD: postgres
+  script:
+    - pytest tests/integration
+
+docling:
+  extends: .python
+  stage: docling-tests
+  script:
+    - pip install -e ".[docling]" || echo "Docling extra is not available from this package index"
+    - pytest tests/docling
+  allow_failure: true
+
+ocr:
+  extends: .python
+  stage: ocr-tests
+  script:
+    - pytest tests/ocr
+  allow_failure: true
+
+gui:
+  image: node:22.21.0-bookworm-slim
+  stage: gui-tests
+  script:
+    - test -f src/frontend/package-lock.json
+    - ! grep -R "fonts.googleapis\|cdn.jsdelivr\|unpkg.com" src/frontend/src src/frontend/index.html
+
+security:
+  extends: .python
+  stage: security-tests
+  script:
+    - pytest tests/unit/test_core.py -k "traversal or production or dimension"
+
+isolation:
+  extends: .python
+  stage: isolation-tests
+  services:
+    - name: pgvector/pgvector:0.8.0-pg16
+      alias: postgres
+  variables:
+    POSTGRES_PASSWORD: postgres
+  script:
+    - pytest tests/integration/test_ingestion_isolation.py
+
+concurrency:
+  extends: .python
+  stage: concurrency-tests
+  script:
+    - pytest tests/concurrency
+  allow_failure: true
+
+.build-image:
+  stage: image-build
+  image: docker:27.3.1
+  services: [docker:27.3.1-dind]
+  script:
+    - docker build -f "dockerfile/Dockerfile.${IMAGE}" -t "${IMAGE}:$CI_COMMIT_SHA" .
+
+api-image:
+  extends: .build-image
+  variables: {IMAGE: rag-store-api}
+files-image:
+  extends: .build-image
+  variables: {IMAGE: rag-store-files}
+worker-image:
+  extends: .build-image
+  variables: {IMAGE: rag-store-worker}
+scanner-image:
+  extends: .build-image
+  variables: {IMAGE: rag-store-scanner}
+mcp-image:
+  extends: .build-image
+  variables: {IMAGE: rag-store-mcp}
+gui-image:
+  extends: .build-image
+  variables: {IMAGE: rag-store-gui}
+docling-image:
+  extends: .build-image
+  variables: {IMAGE: rag-store-docling}
+
+helm-lint:
+  stage: helm-lint
+  image: alpine/helm:3.16.4
+  script:
+    - helm lint helm-chart
+
+helm-render:
+  stage: helm-render
+  image: alpine/helm:3.16.4
+  script:
+    - helm template rag-store helm-chart --namespace rag-store >/tmp/default.yaml
+    - helm template rag-store helm-chart -f helm-deploy/rag-store-values.yaml --namespace rag-store >/tmp/prod.yaml
+    - helm template rag-store helm-chart --set maintenance.enabled=true >/tmp/maint.yaml
+    - helm template rag-store helm-chart --set persistence.global.existingClaim=keep --set persistence.local.existingClaim=keep >/tmp/existing.yaml
+    - helm template rag-store helm-chart --set searchApi.autoscaling.enabled=true >/tmp/hpa.yaml
+    - helm template rag-store helm-chart --set ingestionWorker.keda.enabled=true >/tmp/keda.yaml
+    - helm template rag-store helm-chart --set gateway.enabled=true --set gateway.existingGateway=shared >/tmp/gw.yaml
+    - "! grep -q 'ingestionWorker cannot enable' /tmp/hpa.yaml"
+
+publish-images:
+  stage: image-publish
+  image: docker:27.3.1
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - test -n "$RAG_STORE_IMAGE_PREFIX"
+    - echo "Publish the images built in previous jobs to $RAG_STORE_IMAGE_PREFIX. Wire registry credentials in GitLab CI variables. This job does not deploy the cluster."
+
+package-chart:
+  stage: chart-package
+  image: alpine/helm:3.16.4
+  script:
+    - helm package helm-chart -d artifacts
+
+publish-chart:
+  stage: chart-publish
+  image: alpine/helm:3.16.4
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - test -n "$RAG_STORE_CHART_REPO"
+    - echo "Push artifacts/rag-store-*.tgz to $RAG_STORE_CHART_REPO with helm push. Credentials stay in CI variables."

@@ -1,0 +1,15 @@
+ARG PYTHON_IMAGE=python:3.12.12-slim-bookworm
+FROM ${PYTHON_IMAGE} AS build
+ARG PIP_INDEX_URL
+ARG PIP_TRUSTED_HOST
+WORKDIR /build
+COPY pyproject.toml README.md ./
+COPY src ./src
+RUN pip install --no-cache-dir --prefix=/install .
+FROM ${PYTHON_IMAGE}
+RUN useradd --uid 10001 --create-home --shell /usr/sbin/nologin ragstore
+COPY --from=build /install /usr/local
+USER 10001
+WORKDIR /home/ragstore
+ENV PYTHONUNBUFFERED=1 HF_HUB_OFFLINE=1 HF_HUB_DISABLE_TELEMETRY=1 TRANSFORMERS_OFFLINE=1 HF_DATASETS_OFFLINE=1
+ENTRYPOINT ["rag-store-worker"]

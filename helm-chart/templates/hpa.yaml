@@ -1,0 +1,25 @@
+{{- $root := . -}}
+{{- range $name := list "searchApi" "ingestionWorker" "mcp" "fileApi" "webGui" "doclingWorker" }}
+{{- $component := index $root.Values $name }}
+{{- if and $component.enabled $component.autoscaling $component.autoscaling.enabled (not $root.Values.maintenance.enabled) }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "rag-store.fullname" $root }}-{{ $name | kebabcase }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "rag-store.fullname" $root }}-{{ $name | kebabcase }}
+  minReplicas: {{ $component.autoscaling.minReplicas }}
+  maxReplicas: {{ $component.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $component.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}
+{{- end }}
