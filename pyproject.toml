@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rag-store"
+version = "1.0.0"
+description = "Self-hosted document intelligence, knowledge storage, and retrieval."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "alembic==1.20.1",
+  "argon2-cffi==25.1.0",
+  "fastapi==0.165.0",
+  "httpx==0.28.1",
+  "huggingface-hub==0.36.2",
+  "mcp==2.3.0",
+  "pgvector==0.5.1",
+  "prometheus-client==0.26.0",
+  "psycopg[binary]==3.3.9",
+  "pydantic==2.14.4",
+  "pydantic-settings==2.16.3",
+  "PyJWT==2.15.1",
+  "python-multipart==0.0.34",
+  "SQLAlchemy==2.1.9",
+  "structlog==26.1.0",
+  "tokenizers==0.21.4",
+  "uvicorn==0.54.0",
+]
+
+[project.optional-dependencies]
+docling = ["docling==2.152.0"]
+dev = [
+  "pytest==9.2.0",
+  "pytest-asyncio==1.5.0",
+  "ruff==0.17.6",
+]
+
+[project.scripts]
+ragctl = "rag_store.cli.main:main"
+rag-store-api = "rag_store.entrypoints.api:main"
+rag-store-files = "rag_store.entrypoints.files:main"
+rag-store-worker = "rag_store.entrypoints.worker:main"
+rag-store-scanner = "rag_store.entrypoints.scanner:main"
+rag-store-mcp = "rag_store.entrypoints.mcp_server:main"
+rag-store-docling = "rag_store.entrypoints.docling:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+rag_store = ["database/migrations/*.py", "database/migrations/versions/*.py", "database/alembic.ini", "py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "integration: tests that require PostgreSQL with pgvector",
+  "performance: opt-in capacity measurements",
+]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/rag_store/api/routes.py" = ["E402"]

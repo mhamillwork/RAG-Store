@@ -1,0 +1,37 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "rag-store.fullname" . }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    {{- if .Values.networkPolicy.ingressCidrs }}
+    - from:
+        {{- range .Values.networkPolicy.ingressCidrs }}
+        - ipBlock: {cidr: {{ . | quote }}}
+        {{- end }}
+    {{- else }}
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- end }}
+  egress:
+    {{- if .Values.networkPolicy.egressCidrs }}
+    - to:
+        {{- range .Values.networkPolicy.egressCidrs }}
+        - ipBlock: {cidr: {{ . | quote }}}
+        {{- end }}
+      {{- if .Values.networkPolicy.egressPorts }}
+      ports:
+        {{- range .Values.networkPolicy.egressPorts }}
+        - protocol: TCP
+          port: {{ . }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+{{- end }}

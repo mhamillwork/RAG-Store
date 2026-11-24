@@ -1,0 +1,23 @@
+{{- range $name := list "global" "local" "doclingModels" }}
+{{- $volume := index $.Values.persistence $name }}
+{{- if and $volume.enabled (not $volume.existingClaim) }}
+{{- if not $volume.storageClass }}
+{{- fail (printf "persistence.%s.storageClass is required when creating a new volume" $name) }}
+{{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "rag-store.fullname" $ }}-{{ $name | kebabcase }}
+  labels:
+    {{- include "rag-store.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes: [{{ $volume.accessMode | quote }}]
+  storageClassName: {{ $volume.storageClass | quote }}
+  resources:
+    requests:
+      storage: {{ $volume.size }}
+{{- end }}
+{{- end }}

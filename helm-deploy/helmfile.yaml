@@ -1,0 +1,26 @@
+# Install and upgrade the RAG Store release.
+# Local chart testing uses the chart in this repository.
+# Set RAG_STORE_CHART=oci://artifactory.tahaa.local/tahaa-helm-local/rag-store
+# and RAG_STORE_CHART_VERSION before using the internal OCI chart.
+#
+#   cd helm-deploy
+#   helmfile diff
+#   helmfile apply
+
+environments:
+  default:
+    values: []
+
+releases:
+  - name: rag-store
+    namespace: rag-store
+    createNamespace: true
+    chart: {{ env "RAG_STORE_CHART" | default "../helm-chart" }}
+    {{- if env "RAG_STORE_CHART_VERSION" }}
+    version: {{ env "RAG_STORE_CHART_VERSION" }}
+    {{- end }}
+    values:
+      - rag-store-values.yaml
+    set:
+      - name: maintenance.enabled
+        value: {{ env "MAINTENANCE_MODE" | default "false" }}

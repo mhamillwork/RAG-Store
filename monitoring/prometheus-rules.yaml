@@ -1,0 +1,52 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rag-store
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: rag-store
+      rules:
+        - alert: RagStoreDatabaseDown
+          expr: rag_store_database_up == 0
+          for: 2m
+          labels: {severity: critical}
+          annotations:
+            summary: RAG Store cannot query PostgreSQL
+        - alert: RagStoreDoclingModelsMissing
+          expr: rag_store_docling_model_ready == 0
+          for: 5m
+          labels: {severity: critical}
+          annotations:
+            summary: A Docling worker reports missing model artifacts
+        - alert: RagStoreJobBacklog
+          expr: sum(rag_store_jobs_pending{state=~"queued|retry_pending"}) > 100
+          for: 15m
+          labels: {severity: warning}
+          annotations:
+            summary: Ingestion jobs are waiting
+        - alert: RagStoreOldestJob
+          expr: rag_store_oldest_pending_job_seconds > 1800
+          for: 10m
+          labels: {severity: warning}
+          annotations:
+            summary: A claimable job has been waiting for more than 30 minutes
+        - alert: RagStoreConversionFailures
+          expr: increase(rag_store_conversions_total{outcome=~"failed|rejected"}[15m]) > 10
+          for: 5m
+          labels: {severity: warning}
+          annotations:
+            summary: Document conversion is failing
+        - alert: RagStoreEmbeddingFailures
+          expr: increase(rag_store_embedding_failures_total[10m]) > 5
+          for: 5m
+          labels: {severity: warning}
+          annotations:
+            summary: Embedding requests are failing
+        - alert: RagStoreLowDocumentStorage
+          expr: rag_store_storage_free_bytes < 20 * 1024 * 1024 * 1024
+          for: 10m
+          labels: {severity: warning}
+          annotations:
+            summary: A document volume has less than 20Gi free

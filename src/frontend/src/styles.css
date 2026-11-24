@@ -1,0 +1,42 @@
+:root {
+  color: #1c2430;
+  background: #f3f0e8;
+  font-family: "Liberation Sans", "Nimbus Sans", sans-serif;
+  font-size: 15px;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+a { color: #1f3a5f; }
+
+.app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.sidebar { background: #1f3a5f; color: #f4f1ea; padding: 20px 14px; }
+.sidebar h1 { font-size: 18px; margin: 0 0 18px; }
+.sidebar button, .sidebar .nav {
+  display: block; width: 100%; text-align: left; background: transparent; color: inherit;
+  border: 0; border-radius: 6px; padding: 8px 10px; margin: 2px 0;
+}
+.sidebar button.active, .sidebar button:hover { background: #2d527f; }
+.sidebar h2 { font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; margin: 16px 8px 6px; color: #c9d4e3; }
+.main { padding: 20px; }
+.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.panel { background: white; border: 1px solid #ddd4c4; border-radius: 8px; padding: 14px; }
+.crumbs { display: flex; gap: 6px; align-items: center; }
+.grid, .list { display: grid; gap: 8px; }
+.grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+.card, .row { border: 1px solid #e4dccb; border-radius: 6px; padding: 10px; background: #fffdf8; }
+.row { display: grid; grid-template-columns: 24px 1fr 140px 120px; gap: 8px; align-items: center; }
+.icon { width: 18px; height: 14px; border: 1.5px solid #1f3a5f; border-radius: 2px; display: inline-block; }
+.folder { background: #e7c36a; border-color: #8a6a1f; }
+.error { color: #8d1d1d; }
+.muted { color: #5c6775; }
+.login { max-width: 380px; margin: 10vh auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; border-bottom: 1px solid #eee; padding: 6px; vertical-align: top; }
+.drop { outline: 2px dashed #1f3a5f; outline-offset: -8px; }
+.dialog { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: grid; place-items: center; }
+.dialog .panel { width: min(480px, 92vw); }
+.hits article { margin-bottom: 12px; }
+pre { white-space: pre-wrap; }

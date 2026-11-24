@@ -1,0 +1,28 @@
+ARG PYTHON_IMAGE=python:3.12.12-slim-bookworm
+FROM ${PYTHON_IMAGE} AS build
+ARG PIP_INDEX_URL
+ARG PIP_TRUSTED_HOST
+WORKDIR /build
+COPY pyproject.toml README.md ./
+COPY src ./src
+RUN pip install --no-cache-dir --prefix=/install ".[docling]"
+
+FROM ${PYTHON_IMAGE}
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng libglib2.0-0 libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+RUN useradd --uid 10001 --create-home --shell /usr/sbin/nologin ragstore
+COPY --from=build /install /usr/local
+USER 10001
+WORKDIR /home/ragstore
+ENV PYTHONUNBUFFERED=1 \
+    HF_HUB_OFFLINE=1 \
+    HF_HUB_DISABLE_TELEMETRY=1 \
+    TRANSFORMERS_OFFLINE=1 \
+    HF_DATASETS_OFFLINE=1 \
+    DOCLING_ARTIFACTS_PATH=/models/docling \
+    RAG_STORE_DOCLING__ALLOW_MODEL_DOWNLOADS=false \
+    RAG_STORE_DOCLING__ALLOW_REMOTE_SERVICES=false \
+    RAG_STORE_DOCLING__OFFLINE_MODE=true \
+    RAG_STORE_DOCLING__DEVICE=cpu
+ENTRYPOINT ["rag-store-docling"]

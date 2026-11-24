@@ -1,0 +1,160 @@
+# Production override. Do not put passwords, tokens, or database URLs in this file.
+# Create the referenced Secret in the rag-store namespace before helmfile apply.
+#
+# Required keys: migrator-url, search-url, files-url, worker-url, jwt-secret.
+# Optional keys: embedding-api-key, reranking-api-key, bootstrap-admin-password.
+
+imagePullSecrets:
+  - name: artifactory-registry-secret
+
+global:
+  imageRegistry: artifactory.tahaa.local/tahaa-image-local/ai-services
+  imageTag: "1.0.0"
+
+nodeSelector:
+  rag-worker: enabled
+
+existingSecret: rag-store-credentials
+
+maintenance:
+  enabled: false
+  runMigration: false
+
+config:
+  environment: production
+  instanceName: rag-store
+  publicBaseUrl: ""
+  embedding:
+    provider: openai-compatible
+    baseUrl: ""
+    model: ""
+    dimensions: 768
+  reranking:
+    enabled: true
+    provider: tei
+    baseUrl: ""
+    model: ""
+    allowFallback: true
+  chunking:
+    tokenizerMode: huggingface
+    tokenizerPath: /models/tokenizer/tokenizer.json
+    tokenizerRequired: true
+  docling:
+    enabled: true
+    artifactsPath: /models/docling
+    offlineMode: true
+    allowModelDownloads: false
+    allowRemoteServices: false
+    device: cpu
+    ocrEnabled: true
+    ocrEngine: rapidocr
+    ocrMode: auto
+    ocrLanguages: en
+    tableStructureEnabled: true
+    tableMode: accurate
+  mcp:
+    allowedHosts: "rag-store-mcp.tahaa.local,rag-store.tahaa.local,localhost,127.0.0.1"
+
+persistence:
+  global:
+    enabled: true
+    existingClaim: ""
+    storageClass: longhorn-ha
+    accessMode: ReadWriteMany
+    size: 500Gi
+  local:
+    enabled: true
+    existingClaim: ""
+    storageClass: longhorn-ha
+    accessMode: ReadWriteMany
+    size: 500Gi
+  doclingModels:
+    enabled: true
+    existingClaim: ""
+    storageClass: longhorn-ha
+    accessMode: ReadWriteMany
+    size: 50Gi
+    mountPath: /models/docling
+
+searchApi:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 12
+    targetCPUUtilizationPercentage: 70
+
+ingestionWorker:
+  replicaCount: 6
+  autoscaling:
+    enabled: false
+  keda:
+    enabled: false
+
+scanner:
+  replicaCount: 2
+
+mcp:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 9
+    targetCPUUtilizationPercentage: 70
+
+fileApi:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+webGui:
+  enabled: true
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+doclingWorker:
+  enabled: true
+  replicaCount: 3
+  autoscaling:
+    enabled: false
+  keda:
+    enabled: false
+
+utilityPod:
+  enabled: false
+
+serviceMonitor:
+  enabled: true
+  namespace: monitoring
+  interval: 30s
+  scrapeTimeout: 10s
+  labels:
+    release: monitoring
+
+prometheusRule:
+  enabled: false
+
+gateway:
+  enabled: false
+  className: ""
+  existingGateway: ""
+  hostnames:
+    gui: rag-store.tahaa.local
+    api: rag-store-api.tahaa.local
+    mcp: rag-store-mcp.tahaa.local
+    files: rag-files.tahaa.local
+  tls:
+    enabled: true
+    secretName: ""
+
+networkPolicy:
+  enabled: false
+  ingressCidrs: []
+  egressCidrs: []

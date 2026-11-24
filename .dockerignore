@@ -1,0 +1,17 @@
+.git
+.venv
+venv
+**/__pycache__
+**/*.pyc
+src/frontend/node_modules
+src/frontend/dist
+tests
+docs
+helm-chart
+helm-deploy
+monitoring
+data
+models
+.env
+*.md
+!README.md

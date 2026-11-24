@@ -1,0 +1,364 @@
+nameOverride: ""
+fullnameOverride: ""
+
+imagePullSecrets: []
+imagePullPolicy: IfNotPresent
+
+global:
+  imageRegistry: ""
+  imageTag: "1.0.0"
+
+maintenance:
+  enabled: false
+  runMigration: false
+
+serviceAccount:
+  create: true
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+config:
+  environment: production
+  instanceName: rag-store
+  logLevel: INFO
+  publicBaseUrl: ""
+  auth:
+    jwtTtlSeconds: 900
+    refreshTtlSeconds: 43200
+    bootstrapAdminUsername: ""
+    oidcIssuer: ""
+    oidcClientId: ""
+  embedding:
+    provider: openai-compatible
+    baseUrl: ""
+    apiPath: /v1/embeddings
+    model: ""
+    dimensions: 768
+    batchSize: 32
+    timeoutSeconds: 120
+    maxRetries: 5
+    queryPrefix: ""
+    documentPrefix: ""
+    tlsVerify: true
+  reranking:
+    enabled: false
+    provider: ""
+    baseUrl: ""
+    model: ""
+    apiPath: /rerank
+    candidateCount: 40
+    topK: 10
+    timeoutSeconds: 60
+    allowFallback: true
+    tlsVerify: true
+  concurrency:
+    embeddingGlobalLimit: 12
+    embeddingReservedInteractive: 4
+    rerankGlobalLimit: 8
+  chunking:
+    strategy: auto
+    maxTokens: 512
+    overlapTokens: 64
+    tokenizerMode: huggingface
+    tokenizerPath: ""
+    tokenizerRequired: true
+  docling:
+    enabled: true
+    artifactsPath: /models/docling
+    offlineMode: true
+    allowRemoteServices: false
+    allowModelDownloads: false
+    device: cpu
+    numThreads: 8
+    maxConcurrentDocuments: 1
+    maxPages: 2000
+    maxDocumentMib: 1024
+    timeoutSeconds: 3600
+    ocrEnabled: true
+    ocrEngine: rapidocr
+    ocrMode: auto
+    ocrLanguages: en
+    forceFullPageOcr: false
+    tableStructureEnabled: true
+    tableMode: accurate
+  search:
+    defaultMode: hybrid
+    defaultTopK: 10
+    maxTopK: 50
+    candidateCount: 40
+  jobs:
+    leaseSeconds: 300
+    maxAttempts: 5
+  quota:
+    maxBytes: 10737418240
+    maxDocuments: 10000
+    maxCollections: 50
+  mcp:
+    path: /mcp
+    allowedHosts: "localhost,127.0.0.1"
+    protectDnsRebinding: true
+
+existingSecret: rag-store-credentials
+secretKeys:
+  migratorUrl: migrator-url
+  searchUrl: search-url
+  filesUrl: files-url
+  workerUrl: worker-url
+  jwtSecret: jwt-secret
+  embeddingApiKey: embedding-api-key
+  rerankingApiKey: reranking-api-key
+  bootstrapAdminPassword: bootstrap-admin-password
+  oidcClientSecret: oidc-client-secret
+
+persistence:
+  global:
+    enabled: true
+    existingClaim: ""
+    storageClass: longhorn-ha
+    accessMode: ReadWriteMany
+    size: 500Gi
+    mountPath: /data/global
+  local:
+    enabled: true
+    existingClaim: ""
+    storageClass: longhorn-ha
+    accessMode: ReadWriteMany
+    size: 500Gi
+    mountPath: /data/local
+  doclingModels:
+    enabled: false
+    existingClaim: ""
+    storageClass: ""
+    accessMode: ReadWriteMany
+    size: 50Gi
+    mountPath: /models/docling
+
+migration:
+  enabled: true
+  backoffLimit: 3
+
+utilityPod:
+  enabled: false
+
+networkPolicy:
+  enabled: false
+  ingressCidrs: []
+  egressCidrs: []
+  egressPorts: []
+
+serviceMonitor:
+  enabled: false
+  namespace: monitoring
+  interval: 30s
+  scrapeTimeout: 10s
+  labels:
+    release: monitoring
+
+prometheusRule:
+  enabled: false
+  namespace: monitoring
+  labels:
+    release: monitoring
+
+gateway:
+  enabled: false
+  className: ""
+  existingGateway: ""
+  hostnames:
+    gui: ""
+    api: ""
+    mcp: ""
+    files: ""
+  tls:
+    enabled: false
+    secretName: ""
+
+searchApi:
+  enabled: true
+  component: search
+  pauseInMaintenance: false
+  replicaCount: 3
+  image: rag-store-api
+  command: []
+  port: 8080
+  mountsDocuments: false
+  mountsModels: false
+  autoscaling:
+    enabled: false
+    minReplicas: 3
+    maxReplicas: 12
+    targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    minAvailable: 2
+  resources:
+    requests: {cpu: "2", memory: 4Gi, ephemeral-storage: 1Gi}
+    limits: {cpu: "8", memory: 16Gi, ephemeral-storage: 4Gi}
+  nodeSelector: {}
+  topologySpread: true
+
+ingestionWorker:
+  enabled: true
+  component: worker
+  pauseInMaintenance: true
+  replicaCount: 6
+  image: rag-store-worker
+  port: 8080
+  metrics: false
+  mountsDocuments: true
+  mountsModels: false
+  autoscaling:
+    enabled: false
+    minReplicas: 3
+    maxReplicas: 21
+    targetCPUUtilizationPercentage: 70
+  keda:
+    enabled: false
+    minReplicaCount: 3
+    maxReplicaCount: 21
+    targetPendingJobsPerReplica: 10
+  podDisruptionBudget:
+    minAvailable: 1
+  resources:
+    requests: {cpu: "4", memory: 8Gi, ephemeral-storage: 2Gi}
+    limits: {cpu: "16", memory: 32Gi, ephemeral-storage: 20Gi}
+  nodeSelector: {}
+  topologySpread: true
+
+scanner:
+  enabled: true
+  component: scanner
+  pauseInMaintenance: true
+  replicaCount: 2
+  image: rag-store-scanner
+  port: 8080
+  metrics: false
+  mountsDocuments: true
+  mountsModels: false
+  autoscaling:
+    enabled: false
+  keda:
+    enabled: false
+  podDisruptionBudget:
+    minAvailable: 1
+  resources:
+    requests: {cpu: 250m, memory: 512Mi, ephemeral-storage: 1Gi}
+    limits: {cpu: "2", memory: 2Gi, ephemeral-storage: 4Gi}
+  nodeSelector: {}
+  topologySpread: true
+
+mcp:
+  enabled: true
+  component: mcp
+  pauseInMaintenance: false
+  replicaCount: 3
+  image: rag-store-mcp
+  port: 8080
+  mountsDocuments: false
+  mountsModels: false
+  autoscaling:
+    enabled: false
+    minReplicas: 3
+    maxReplicas: 9
+    targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    minAvailable: 2
+  resources:
+    requests: {cpu: "1", memory: 2Gi, ephemeral-storage: 1Gi}
+    limits: {cpu: "4", memory: 8Gi, ephemeral-storage: 4Gi}
+  nodeSelector: {}
+  topologySpread: true
+
+fileApi:
+  enabled: true
+  component: files
+  pauseInMaintenance: false
+  replicaCount: 3
+  image: rag-store-files
+  port: 8080
+  mountsDocuments: true
+  mountsModels: false
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    minAvailable: 2
+  resources:
+    requests: {cpu: "1", memory: 2Gi, ephemeral-storage: 2Gi}
+    limits: {cpu: "4", memory: 8Gi, ephemeral-storage: 10Gi}
+  nodeSelector: {}
+  topologySpread: true
+
+webGui:
+  enabled: true
+  component: gui
+  pauseInMaintenance: false
+  replicaCount: 3
+  image: rag-store-gui
+  port: 8080
+  mountsDocuments: false
+  mountsModels: false
+  securityContext:
+    runAsUser: 101
+    runAsGroup: 101
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+  autoscaling:
+    enabled: false
+    minReplicas: 3
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    minAvailable: 2
+  resources:
+    requests: {cpu: 500m, memory: 1Gi, ephemeral-storage: 1Gi}
+    limits: {cpu: "2", memory: 4Gi, ephemeral-storage: 2Gi}
+  nodeSelector: {}
+  topologySpread: true
+
+doclingWorker:
+  enabled: true
+  component: docling
+  pauseInMaintenance: true
+  replicaCount: 3
+  image: rag-store-docling
+  port: 8080
+  metrics: false
+  mountsDocuments: true
+  mountsModels: true
+  autoscaling:
+    enabled: false
+    minReplicas: 3
+    maxReplicas: 14
+    targetCPUUtilizationPercentage: 70
+  keda:
+    enabled: false
+    minReplicaCount: 3
+    maxReplicaCount: 14
+    targetPendingJobsPerReplica: 5
+  podDisruptionBudget:
+    minAvailable: 1
+  resources:
+    requests: {cpu: "8", memory: 16Gi, ephemeral-storage: 8Gi}
+    limits: {cpu: "24", memory: 48Gi, ephemeral-storage: 40Gi}
+  nodeSelector: {}
+  topologySpread: true

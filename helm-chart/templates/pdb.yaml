@@ -1,0 +1,17 @@
+{{- $root := . -}}
+{{- range $name := list "searchApi" "ingestionWorker" "scanner" "mcp" "fileApi" "webGui" "doclingWorker" }}
+{{- $component := index $root.Values $name }}
+{{- if and $component.enabled $component.podDisruptionBudget }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "rag-store.fullname" $root }}-{{ $name | kebabcase }}
+spec:
+  minAvailable: {{ $component.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $root.Release.Name }}
+      app.kubernetes.io/component: {{ $name | kebabcase }}
+{{- end }}
+{{- end }}

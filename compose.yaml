@@ -1,0 +1,122 @@
+name: rag-store
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.0-pg16
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/postgres-init.sql:/docker-entrypoint-initdb.d/01-ragstore.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  search:
+    image: rag-store-api:1.0.0
+    environment: &app
+      RAG_STORE_ENVIRONMENT: development
+      RAG_STORE_DATABASE__URL: postgresql+psycopg://ragstore_search:search@postgres:5432/ragstore
+      RAG_STORE_AUTH__JWT_SECRET: ${RAG_STORE_AUTH__JWT_SECRET:?set a 32+ character JWT secret}
+      RAG_STORE_EMBEDDING__PROVIDER: ${RAG_STORE_EMBEDDING__PROVIDER:-deterministic-test}
+      RAG_STORE_EMBEDDING__BASE_URL: ${RAG_STORE_EMBEDDING__BASE_URL:-}
+      RAG_STORE_EMBEDDING__MODEL: ${RAG_STORE_EMBEDDING__MODEL:-deterministic-test}
+      RAG_STORE_EMBEDDING__DIMENSIONS: "768"
+      RAG_STORE_CHUNKING__TOKENIZER_MODE: basic
+      RAG_STORE_CHUNKING__TOKENIZER_REQUIRED: "false"
+      RAG_STORE_DOCLING__OCR_ENABLED: "true"
+      RAG_STORE_DOCLING__OFFLINE_MODE: "true"
+      RAG_STORE_DOCLING__ALLOW_MODEL_DOWNLOADS: "false"
+      HF_HUB_OFFLINE: "1"
+    depends_on:
+      postgres: {condition: service_healthy}
+    ports: ["8080:8080"]
+
+  files:
+    image: rag-store-files:1.0.0
+    environment:
+      <<: *app
+      RAG_STORE_DATABASE__URL: postgresql+psycopg://ragstore_files:files@postgres:5432/ragstore
+      RAG_STORE_AUTH__BOOTSTRAP_ADMIN_USERNAME: ${RAG_STORE_AUTH__BOOTSTRAP_ADMIN_USERNAME:-}
+      RAG_STORE_AUTH__BOOTSTRAP_ADMIN_PASSWORD: ${RAG_STORE_AUTH__BOOTSTRAP_ADMIN_PASSWORD:-}
+      RAG_STORE_STORAGE__GLOBAL_ROOT: /data/global
+      RAG_STORE_STORAGE__LOCAL_ROOT: /data/local
+    volumes: &data
+      - global:/data/global
+      - local:/data/local
+    depends_on:
+      postgres: {condition: service_healthy}
+    ports: ["8081:8080"]
+
+  worker:
+    image: rag-store-worker:1.0.0
+    environment:
+      <<: *app
+      RAG_STORE_DATABASE__URL: postgresql+psycopg://ragstore_worker:worker@postgres:5432/ragstore
+      RAG_STORE_STORAGE__GLOBAL_ROOT: /data/global
+      RAG_STORE_STORAGE__LOCAL_ROOT: /data/local
+    volumes: *data
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  scanner:
+    image: rag-store-scanner:1.0.0
+    environment:
+      <<: *app
+      RAG_STORE_DATABASE__URL: postgresql+psycopg://ragstore_worker:worker@postgres:5432/ragstore
+      RAG_STORE_STORAGE__GLOBAL_ROOT: /data/global
+      RAG_STORE_STORAGE__LOCAL_ROOT: /data/local
+    volumes: *data
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  mcp:
+    image: rag-store-mcp:1.0.0
+    environment:
+      <<: *app
+      RAG_STORE_DATABASE__URL: postgresql+psycopg://ragstore_search:search@postgres:5432/ragstore
+      RAG_STORE_MCP__ALLOWED_HOSTS: localhost,127.0.0.1,mcp
+    depends_on:
+      postgres: {condition: service_healthy}
+    ports: ["8082:8080"]
+
+  docling:
+    image: rag-store-docling:1.0.0
+    environment:
+      <<: *app
+      RAG_STORE_DATABASE__URL: postgresql+psycopg://ragstore_worker:worker@postgres:5432/ragstore
+      RAG_STORE_STORAGE__GLOBAL_ROOT: /data/global
+      RAG_STORE_STORAGE__LOCAL_ROOT: /data/local
+      RAG_STORE_DOCLING__ARTIFACTS_PATH: /models/docling
+      DOCLING_ARTIFACTS_PATH: /models/docling
+    volumes:
+      - global:/data/global
+      - local:/data/local
+      - ${RAG_STORE_DOCLING_MODELS:-./models/docling}:/models/docling:ro
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  gui:
+    image: rag-store-gui:1.0.0
+    volumes:
+      - ./src/frontend/nginx.compose.conf:/etc/nginx/conf.d/default.conf:ro
+    ports: ["8088:8080"]
+    depends_on: [search, files]
+
+  migrate:
+    image: rag-store-api:1.0.0
+    environment:
+      RAG_STORE_DATABASE__URL: postgresql+psycopg://ragstore_migrator:migrator@postgres:5432/ragstore
+    command: ["python", "-c", "from rag_store.database.migrate import upgrade; import os; upgrade(os.environ['RAG_STORE_DATABASE__URL'])"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: "no"
+
+volumes:
+  pgdata: {}
+  global: {}
+  local: {}
